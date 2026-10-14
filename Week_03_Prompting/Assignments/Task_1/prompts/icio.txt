@@ -1,0 +1,31 @@
+Instructions:
+Generate one valid SQLite SQL query for every natural-language question. Use only tables and columns that exist in the provided database schema. Do not modify the evaluation script, labels, schema, or database files.
+
+Context:
+The project contains:
+- `restaurants_dataset.csv` – source dataset containing natural-language questions and expected results.
+- `restaurants-schema.csv` – database schema defining tables, columns, primary keys, and column types.
+- `restaurants-db.txt` – database records used to construct the SQLite database, if available.
+- `restaurants_dataset_predictions.csv` – required output file containing generated SQL predictions.
+
+The evaluation script executes each predicted query against an in-memory SQLite database and compares the returned rows with the expected results. Accuracy depends on exact result equivalence, including duplicate rows, rather than textual similarity between SQL queries.
+
+Input:
+Read all questions from `restaurants_dataset.csv` and inspect `restaurants-schema.csv` before generating queries. Use the actual CSV headers and preserve every question exactly as provided.
+
+Output:
+Create `restaurants_dataset_predictions.csv` with the columns `question` and `predicted_sql`.
+
+Requirements:
+1. Generate exactly one SQL query for each input question.
+2. Preserve the original question text and the order of all records.
+3. Produce executable SQLite SQL, not explanations, pseudocode, or Markdown.
+4. Use only tables and columns confirmed by the schema.
+5. Correctly handle joins, aggregation, filtering, sorting, grouping, subqueries, NULL values, and limits as required by each question.
+6. Use the database records, when available, to understand actual values and relationships.
+7. Do not hardcode expected results or use the labels to construct queries that merely reproduce known answers.
+8. Do not omit questions, invent questions, or merge multiple questions into one record.
+9. Properly quote identifiers when necessary and ensure each SQL query is contained in a single CSV field with correct CSV escaping.
+10. Do not include explanations or additional columns in the output.
+
+Before finishing, validate the CSV format, record count, question preservation, and SQL syntax. If possible, execute every query against the same SQLite schema and data used by the evaluation script. Fix all errors before returning the final file.

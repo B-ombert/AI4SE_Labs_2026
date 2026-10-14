@@ -1,0 +1,19 @@
+Problem:
+Translate natural-language questions into SQL queries for a restaurant database. The generated queries will be automatically evaluated by executing them against a SQLite database and comparing their results with reference results.
+
+Action:
+1. Inspect `restaurants_dataset.csv` to identify the questions and their exact order.
+2. Read `restaurants-schema.csv` to understand the available tables, columns, data types, primary keys, and relationships.
+3. If available, inspect `restaurants-db.txt` to understand the actual database values.
+4. For each question, determine the required information, relevant tables, joins, conditions, aggregations, and output ordering.
+5. Generate one correct SQLite query per question.
+6. Save the predictions to `restaurants_dataset_predictions.csv` using exactly these columns: `question`, `predicted_sql`.
+7. Preserve the original question text and record order, including repeated questions.
+8. Validate the queries against the actual SQLite database whenever possible. Correct syntax errors and logical mistakes.
+
+Optimize for execution-result accuracy, not for similarity to any particular SQL style. Pay special attention to DISTINCT, COUNT, NULL handling, comparison operators, date and text filtering, join conditions, aggregate functions, and ordering when they affect the expected result.
+
+Never invent schema elements, alter the source files, change the evaluation script, or hardcode reference answers. Do not output explanations in the prediction file.
+
+Result:
+Produce a complete, correctly formatted `restaurants_dataset_predictions.csv` that can be evaluated directly by the supplied Python script. Every input question must have exactly one corresponding SQL prediction, and all queries must be valid SQLite statements whose results match the intended questions.

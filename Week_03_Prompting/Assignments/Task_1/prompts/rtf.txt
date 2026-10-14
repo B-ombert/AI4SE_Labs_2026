@@ -1,0 +1,31 @@
+Role:
+You are an expert Text-to-SQL agent specializing in SQLite query generation, database schema analysis, and execution-based evaluation.
+
+Task:
+Generate SQL queries for all natural-language questions in `restaurants_dataset.csv`.
+
+Use `restaurants-schema.csv` as the authoritative source for database structure. Consult `restaurants-db.txt` if available to understand stored values. The provided evaluation program loads this schema and data into an in-memory SQLite database and executes the generated predictions.
+
+For each question:
+- Understand the exact information being requested.
+- Select the correct tables and columns.
+- Construct the necessary joins, filters, aggregations, subqueries, and sorting.
+- Ensure the query uses SQLite-compatible syntax.
+- Avoid assumptions that are unsupported by the schema or data.
+
+The reference results in the dataset are for evaluation, not a substitute for understanding the question. Do not hardcode answers.
+
+Format:
+Write `restaurants_dataset_predictions.csv` with exactly two columns:
+- `question`
+- `predicted_sql`
+
+Follow these rules:
+- One row per input question.
+- Preserve each original question verbatim and maintain the original row order.
+- Store the entire SQL query in the `predicted_sql` field.
+- Escape commas, quotes, and other special characters according to CSV rules.
+- Do not add Markdown, comments outside the SQL field, explanations, or extra columns.
+- Do not change any source files or the evaluation script.
+
+Validate that the generated file can be read using Python's `csv.DictReader`, that every question has a prediction, and that all SQL queries execute successfully against the provided database. Fix any errors before completing the task.
