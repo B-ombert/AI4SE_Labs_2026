@@ -1,0 +1,3 @@
+ICIO – jasne oddeľuje inštrukcie, kontext, vstup a požadovaný výstup, čo pomáha pri generovaní SQL dotazov.
+PAR – štruktúruje prompt na problém, akciu a výsledok, čím poskytuje modelu jasný postup riešenia.
+RTF – definuje rolu, úlohu a formát výstupu, čo pomáha dosiahnuť konzistentné SQL výstupy.
