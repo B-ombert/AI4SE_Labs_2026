@@ -1,0 +1,1 @@
+Použil som metriku F1 score, ktorá počíta podobnosť výsledkov, teda okrem 0 a 1 vie dať výsledok aj medzi nimi, no po odskúšaní všetkých súborov mi výsledné presnosti vyšli rovnaké
