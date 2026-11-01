@@ -1,0 +1,126 @@
+ADR 1: Initial Architecture Selection for OneSport
+
+Date: 2026-11-01
+Status: Accepted
+
+Context
+
+The OneSport project is a new, comprehensive sports portal. The system must support a diverse feature set encompassing identity management, content delivery (news filtering), e-commerce preparation (ticket saving/collections), and a social networking graph (friend requests and lists).
+
+As detailed in the discussion recorded in task1.txt, the engineering team evaluated three distinct architectural approaches to implement this system:
+
+Microservices Architecture:
+
+Concept: Splitting the system into business domains (Identity, Content & Ticketing, Social) with separate databases and event-driven communication (e.g., Kafka).
+
+Pain Points: Introduces significant network complexity, eventual consistency, and distributed transaction challenges. For example, rendering a friend list with user details requires either synchronous API composition (creating a distributed monolith prone to cascading failures) or asynchronous data duplication (which is notoriously difficult to debug and maintain).
+
+Serverless & Managed Services:
+
+Concept: Cloud-native approach using Functions-as-a-Service (AWS Lambda) and NoSQL (DynamoDB).
+
+Pain Points: Introduces cold starts that could severely degrade the user experience during e-commerce actions (like saving tickets). Furthermore, NoSQL enforces highly inflexible access patterns; ad-hoc queries requested by product managers would require expensive table scans or complete database re-engineering.
+
+Modular Monolith:
+
+Concept: A single unified backend application backed by a single relational database (e.g., PostgreSQL), but with strictly enforced internal domain boundaries.
+
+Pain Points: Risk of deployment bottlenecks, potential database locking during massive cascading deletes, and the discipline required to prevent state mutability across modules (spaghetti code).
+
+Decision
+
+We will adopt a Modular Monolith architecture backed by a single relational database (PostgreSQL) for the initial build of OneSport.
+
+Rationale for the Current Project Stage:
+As OneSport is a brand-new, rapidly evolving project, maximizing developer velocity and adaptability is our top priority. A Modular Monolith provides the flexibility to easily execute complex relational queries as product requirements inevitably shift—avoiding the rigid, pre-defined access patterns and cold-start latency forced upon us by a Serverless/NoSQL approach. Furthermore, it offers low operational overhead and immediate transactional integrity. This allows us to build core features (like synchronized account deletion and friend request removal) quickly, without sinking time into the steep debugging curve, dead-letter queues, and eventual consistency nightmares inherent to a Day-1 Microservices architecture.
+
+To mitigate the known risks associated with monoliths and ensure we remain agile as we scale, we will strictly enforce modular boundaries within the codebase (e.g., physically separating the /auth, /content, and /social domains). We will also utilize database schemas or namespaces to keep domain data logically isolated. By avoiding excessive cross-module foreign keys, we secure the transactional safety we need now, while keeping the door wide open to extract these modules into independent microservices if future traffic dictates it.
+
+Consequences
+
+Positive
+
+Low Operational Complexity: No need to manage distributed tracing, service meshes, or network latency between internal domains.
+
+Transactional Integrity: Eliminates eventual consistency issues; we can rely on standard ACID transactions (e.g., when a user deletes their account, their friend requests can be removed synchronously).
+
+Flexibility in Querying: A relational database allows us to easily write complex JOIN queries as product requirements rapidly evolve, avoiding the rigid access patterns of NoSQL.
+
+Developer Velocity: Easier local setup and debugging for a new project.
+
+Negative
+
+Scaling Limitations: As traffic grows, we cannot scale individual components (like the news filter) independently from the authentication service.
+
+Database Contention: We must carefully optimize queries and indexing to prevent cascading deletes from causing database CPU spikes and locking.
+
+Deployment Coupling: Any bug fix requires redeploying the entire application, which may eventually slow down deployment pipelines.
+
+Requires High Discipline: Developers must strictly adhere to architectural boundaries to prevent tight coupling and state mutation across domain modules.
+
+###
+
+Make the reasoning behind selecting the Modular Monolith more explicit. Explain why it is the most appropriate choice for OneSport at its current stage, considering the trade-offs of the other two alternatives.
+
+
+###
+
+ADR 1: Initial Architecture Selection for OneSport
+
+Date: 2026-11-01
+Status: Accepted
+
+Context
+
+The OneSport project is a new, comprehensive sports portal. The system must support a diverse feature set encompassing identity management, content delivery (news filtering), e-commerce preparation (ticket saving/collections), and a social networking graph (friend requests and lists).
+
+As detailed in the discussion recorded in task1.txt, the engineering team evaluated three distinct architectural approaches to implement this system:
+
+Microservices Architecture:
+
+Concept: Splitting the system into business domains (Identity, Content & Ticketing, Social) with separate databases and event-driven communication (e.g., Kafka).
+
+Pain Points: Introduces significant network complexity, eventual consistency, and distributed transaction challenges. For example, rendering a friend list with user details requires either synchronous API composition (creating a distributed monolith prone to cascading failures) or asynchronous data duplication (which is notoriously difficult to debug and maintain).
+
+Serverless & Managed Services:
+
+Concept: Cloud-native approach using Functions-as-a-Service (AWS Lambda) and NoSQL (DynamoDB).
+
+Pain Points: Introduces cold starts that could severely degrade the user experience during e-commerce actions (like saving tickets). Furthermore, NoSQL enforces highly inflexible access patterns; ad-hoc queries requested by product managers would require expensive table scans or complete database re-engineering.
+
+Modular Monolith:
+
+Concept: A single unified backend application backed by a single relational database (e.g., PostgreSQL), but with strictly enforced internal domain boundaries.
+
+Pain Points: Risk of deployment bottlenecks, potential database locking during massive cascading deletes, and the discipline required to prevent state mutability across modules (spaghetti code).
+
+Decision
+
+We will adopt a Modular Monolith architecture backed by a single relational database (PostgreSQL) for the initial build of OneSport.
+
+Rationale for the Current Project Stage:
+As OneSport is a brand-new, rapidly evolving project, maximizing developer velocity and adaptability is our top priority. A Modular Monolith provides the flexibility to easily execute complex relational queries as product requirements inevitably shift—avoiding the rigid, pre-defined access patterns and cold-start latency forced upon us by a Serverless/NoSQL approach. Furthermore, it offers low operational overhead and immediate transactional integrity. This allows us to build core features (like synchronized account deletion and friend request removal) quickly, without sinking time into the steep debugging curve, dead-letter queues, and eventual consistency nightmares inherent to a Day-1 Microservices architecture.
+
+To mitigate the known risks associated with monoliths and ensure we remain agile as we scale, we will strictly enforce modular boundaries within the codebase (e.g., physically separating the /auth, /content, and /social domains). We will also utilize database schemas or namespaces to keep domain data logically isolated. By avoiding excessive cross-module foreign keys, we secure the transactional safety we need now, while keeping the door wide open to extract these modules into independent microservices if future traffic dictates it.
+
+Consequences
+
+Positive
+
+Low Operational Complexity: No need to manage distributed tracing, service meshes, or network latency between internal domains.
+
+Transactional Integrity: Eliminates eventual consistency issues; we can rely on standard ACID transactions (e.g., when a user deletes their account, their friend requests can be removed synchronously).
+
+Flexibility in Querying: A relational database allows us to easily write complex JOIN queries as product requirements rapidly evolve, avoiding the rigid access patterns of NoSQL.
+
+Developer Velocity: Easier local setup and debugging for a new project.
+
+Negative
+
+Scaling Limitations: As traffic grows, we cannot scale individual components (like the news filter) independently from the authentication service.
+
+Database Contention: We must carefully optimize queries and indexing to prevent cascading deletes from causing database CPU spikes and locking.
+
+Deployment Coupling: Any bug fix requires redeploying the entire application, which may eventually slow down deployment pipelines.
+
+Requires High Discipline: Developers must strictly adhere to architectural boundaries to prevent tight coupling and state mutation across domain modules.

@@ -1,0 +1,68 @@
+Given the feature set—which spans identity management, content delivery, e-commerce (ticket saving/purchasing prep), and social networking—here are three distinct architectural approaches we could take:
+
+The Modular Monolith (Traditional N-Tier): A single unified backend application (e.g., Node.js/Express, Spring Boot, or Django) with a single relational database (like PostgreSQL).
+
+Microservices Architecture: An event-driven distributed system split by business domains (Auth Service, Content Service, Social Service) with separate databases, communicating via REST/gRPC and a message broker like Kafka or RabbitMQ.
+
+Serverless & Managed Services Architecture: A cloud-native approach using Functions-as-a-Service (e.g., AWS Lambda), an API Gateway, and a NoSQL database (e.g., DynamoDB) to handle highly variable traffic loads (like surges during major sporting events).
+
+Which one would you like to dive into first?
+
+###
+
+Let’s start with the Modular Monolith, what are the painful parts I might run into?
+
+It's a misconception that monoliths are inherently bad. For a team starting a new project like OneSport, a modular monolith is often the best choice because it minimizes operational complexity. You don't have to manage network latency between internal services or deal with distributed tracing.
+
+However, the low-level pain points emerge as the application grows:
+
+Database Coupling and Locking: Because you share a single relational database, you will likely use Foreign Keys everywhere. For example, your Saved_Tickets table will point to the Users table and the Tickets table. When User Story 5 happens (User deletes their account), a cascading delete might lock large portions of the database. If millions of users are filtering news (User Story 8) at the same time a massive cascade delete runs, your database CPU spikes, and the whole app slows down.
+
+Deployment Bottlenecks: Every time you want to fix a tiny bug in the Italian news filter (User Story 8), you have to redeploy the entire application. If the startup time is slow, this causes downtime or requires complex blue-green deployment strategies.
+
+State Mutability: In code, if boundaries aren't strictly enforced, a developer might write a function in the News Module that directly mutates state in the Social Module (e.g., altering a friend's feed directly). This creates spaghetti code.
+
+###
+
+so the shared database schema is the real trap, not necessarily the single codebase. Okay, so what if we use Microservices to fix that database coupling? How would we split OneSport up, and how do we handle things like a user's friend list (User Story 22) if the user details are in a different database than the friend relations?
+
+###
+
+To decouple the data, we would split OneSport into three core services, each with its own database:
+Identity/Auth Service: Handles Users, Login, Registration (User Stories 1-6).
+
+Content & Ticketing Service: Handles News, Tickets, and User Collections/Favorites (User Stories 7-15, 20-21).
+
+Social Service: Handles the friend graph and friend requests (User Stories 16-19, 22-24).
+
+The low-level pain point here is Eventual Consistency and Distributed Transactions.
+Let's look at User Story 22: "See my friend list, in order to see their details."
+The Social Service only knows that User_A is friends with User_B (just UUIDs). It doesn't know User B's email or profile picture.
+
+To solve this, you either have to:
+
+Synchronous API Composition (The API Gateway pattern): The client requests the friend list. The API gateway calls the Social Service to get the array of friend IDs, then immediately calls the Identity Service with those IDs to fetch the profiles, stitches the JSON together, and returns it. Pain point: If the Identity Service is down, the Social feature is broken. You've just created a distributed monolith with network latency.
+
+Asynchronous Data Duplication (Event-Driven): When a user updates their email (User Story 6), the Identity Service publishes a UserUpdated event to a Kafka topic. The Social Service consumes this event and updates its own local, read-optimized database copy of the user's details. Pain point: It's incredibly painful to debug. If a Kafka message fails to process, User A might see User B's old email on their friend list for days. Writing the fallback logic and dead-letter queues to fix this is exhausting.
+
+###
+
+If microservices introduce all that network complexity, what about the Serverless architecture? Let's say AWS Lambda and DynamoDB. I know it scales well for spikes but how do we handle relational data like "friend requests" in NoSQL?
+
+###
+
+Serverless removes server management, but it forces you into highly opinionated paradigms.
+
+With DynamoDB (NoSQL), you use a Single-Table Design. You don't have tables for Users, News, and Friends. Everything goes into one massive table, and you use generic Partition Keys (PK) and Sort Keys (SK) to build an Adjacency List.
+
+For friend requests (User Stories 16, 17, 23, 24):
+
+To send a request from User A to User B, you insert a record: PK=USER#A, SK=REQUEST#B, Status=PENDING.
+
+To allow User B to see their incoming requests, you must use a Global Secondary Index (GSI) that flips the keys, or you write a second record: PK=USER#B, SK=INCOMING_REQUEST#A.
+
+Here are the low-level pain points with Serverless:
+
+Inflexible Access Patterns: If the product manager suddenly asks for a new feature—"Show me all users who have saved Italian tickets AND have more than 5 friends"—in PostgreSQL, you just write a new JOIN query. In DynamoDB, you literally cannot do this without running a full table scan (which is slow and wildly expensive) or entirely re-engineering your database indexes and data migration.
+
+Cold Starts: When a user clicks "Add to collection" (User Story 13), API Gateway triggers a Lambda function. If that function hasn't been invoked in the last 15 minutes, AWS has to provision a container, load your code, and boot the runtime. This "cold start" can take 1-3 seconds. For an e-commerce action like saving a ticket, a 3-second delay feels broken to the user. You have to write low-level keep-alive pingers or pay for Provisioned Concurrency to avoid this.
